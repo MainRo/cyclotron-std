@@ -9,4 +9,4 @@ def make_stdout_driver(loop = None):
         sink.data.subscribe(lambda data: sys.stdout.write(data))
         return None
 
-    return Component(entry_point=stdout_driver, input=Sink)
+    return Component(call=stdout_driver, input=Sink)
