@@ -1,7 +1,15 @@
 from collections import namedtuple
 import argparse as std
 
-from rx import Observable
+from rx import AnonymousObservable
+
+class ArgumentParser(std.ArgumentParser):
+    """ This overloaded ArgumentParser class avoids that the parser exits in
+    case of parsing error. This allows to gracefully handle errors.
+    """
+
+    def error(self, message):
+        raise NameError(message)
 
 # config items
 Parser = namedtuple('Parser', ['description'])
@@ -13,38 +21,36 @@ Argument = namedtuple('Argument', ['key', 'value'])
 
 def argparse(parser, add_argument, argv):
     """ Parses arguments coming from the argv Observable and outputs them as
-    ParsedArgument items in the output observable.
+    Argument items in the output observable.
 
     Arguments:
-    config -- An Observable the must contain one Config item and some Argument
-        items.
+    Parser -- An Observable containing one Parser item.
+    add_argument -- An Observable containing AddArgument items.
     argv -- An Observable of strings.
 
-    Returns an Observable of ParsedArgument items.
+    Returns an Observable of Argument items.
     """
+    def add_arg(parser, arg_spec):
+        parser.add_argument(arg_spec.name, help=arg_spec.help)
+        return parser
 
-    def arg_config_accumulator(acc, i):
-        if acc is None:
-            print("init acc")
-            acc = i
-        else:
-            print("i: {}".format(i))
-            acc.add_argument(i.name, help=i.help)
-        return acc
 
-    args = argv \
-        .scan(lambda acc,i: acc + [i], []) \
-        .last()
-
-    parsed_args = parser \
-        .map(lambda i: std.ArgumentParser(description=i.description)) \
-        .concat(add_argument) \
-        .do_action(lambda i: print("concat: {}".format(i))) \
-        .scan(arg_config_accumulator, None) \
+    parse_request = parser \
+        .map(lambda i: ArgumentParser(description=i.description)) \
+        .combine_latest(add_argument, lambda parser, arg_spec: add_arg(parser,arg_spec)) \
         .last() \
-        .do_action(lambda i: print("done")) \
-        .combine_latest(args, lambda parser, args: parser.parse_args(args)) \
-        .flat_map(lambda i: Observable.from_(
-            [ Argument(key=key, value=value) for key,value in vars(i).items()]))
+        .combine_latest(argv.to_list(), lambda parser, args: (parser,args))
 
-    return parsed_args
+    def subscribe(observer):
+        def on_next(value):
+            parser, args = value
+            try:
+                args = parser.parse_args(args)
+                for key,value in vars(args).items():
+                    observer.on_next(Argument(key=key, value=value))
+            except NameError as exc:
+                observer.on_error("{}\n{}".format(exc, parser.format_help()))
+
+        return parse_request.subscribe(on_next, observer.on_error, observer.on_completed)
+
+    return AnonymousObservable(subscribe)

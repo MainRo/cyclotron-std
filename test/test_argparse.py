@@ -32,3 +32,19 @@ class ArgparseTestCase(TestCase):
             actual_result = i
         args.to_list().subscribe(set_result)
         self.assertEqual(expected_result, actual_result)
+
+    def test_parse_bad_arg(self):
+        args = argparse.argparse(
+            Observable.just(argparse.Parser(description="test_parse")),
+            Observable.from_([
+                argparse.AddArgument(name="--foo"),
+            ]),
+            Observable.from_(["--bar", "barz"]))
+
+        actual_result = None
+        def on_error(error):
+            nonlocal actual_result
+            actual_result = error
+
+        args.subscribe(on_error=on_error)
+        self.assertIn("unrecognized arguments", actual_result)
