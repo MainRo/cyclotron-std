@@ -24,7 +24,7 @@ setup(
     version='0.2.0',
     url='https://github.com/MainRo/cyclotron-std.git',
     license='MIT',
-    description="Stabdard library drivers and components for cyclotron",
+    description="Standard library drivers and components for cyclotron",
     long_description=description,
     author='Romain Picard',
     author_email='romain.picard@oakbits.com',
