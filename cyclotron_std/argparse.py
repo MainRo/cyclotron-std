@@ -19,16 +19,25 @@ AddArgument.__new__.__defaults__ = ('',)
 # output items
 Argument = namedtuple('Argument', ['key', 'value'])
 
-def argparse(parser, add_argument, argv):
-    """ Parses arguments coming from the argv Observable and outputs them as
+def argparse(argv, parser, add_argument):
+    """ A command line argument parser.
+    Parses arguments coming from the argv Observable and outputs them as
     Argument items in the output observable.
 
-    Arguments:
-    Parser -- An Observable containing one Parser item.
-    add_argument -- An Observable containing AddArgument items.
-    argv -- An Observable of strings.
+    Parameters
+    -----------
+    argv : Observable
+        An Observable of strings.
+    parser : Observable
+        An Observable containing one Parser item.
+    add_argument : Observable
+        An Observable containing AddArgument items.
 
-    Returns an Observable of Argument items.
+
+    Returns
+    -------
+    Observable
+        An Observable of Argument items.
     """
     def add_arg(parser, arg_spec):
         parser.add_argument(arg_spec.name, help=arg_spec.help)

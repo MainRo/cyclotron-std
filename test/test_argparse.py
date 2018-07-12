@@ -16,11 +16,11 @@ class ArgparseTestCase(TestCase):
 
     def test_parse(self):
         args = argparse.argparse(
+            Observable.from_(["--foo", "fooz"]),
             Observable.just(argparse.Parser(description="test_parse")),
             Observable.from_([
                 argparse.AddArgument(name="--foo"),
-            ]),
-            Observable.from_(["--foo", "fooz"]))
+            ]))
 
         expected_result = [
             argparse.Argument(key="foo", value="fooz")
@@ -35,11 +35,11 @@ class ArgparseTestCase(TestCase):
 
     def test_parse_bad_arg(self):
         args = argparse.argparse(
+            Observable.from_(["--bar", "barz"]),
             Observable.just(argparse.Parser(description="test_parse")),
             Observable.from_([
                 argparse.AddArgument(name="--foo"),
-            ]),
-            Observable.from_(["--bar", "barz"]))
+            ]))
 
         actual_result = None
         def on_error(error):
