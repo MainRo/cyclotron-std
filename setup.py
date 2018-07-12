@@ -21,7 +21,7 @@ install_requires = [
 
 setup(
     name="cyclotron-std",
-    version='0.2.0',
+    version='0.3.0',
     url='https://github.com/MainRo/cyclotron-std.git',
     license='MIT',
     description="Standard library drivers and components for cyclotron",
