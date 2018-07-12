@@ -13,13 +13,13 @@ class ArgumentParser(std.ArgumentParser):
 
 # config items
 Parser = namedtuple('Parser', ['description'])
-AddArgument = namedtuple('AddArgument', ['name', 'help'])
-AddArgument.__new__.__defaults__ = ('',)
+ArgumentDef = namedtuple('ArgumentDef', ['name', 'help'])
+ArgumentDef.__new__.__defaults__ = ('',)
 
 # output items
 Argument = namedtuple('Argument', ['key', 'value'])
 
-def argparse(argv, parser, add_argument):
+def argparse(argv, parser, arguments):
     """ A command line argument parser.
     Parses arguments coming from the argv Observable and outputs them as
     Argument items in the output observable.
@@ -30,8 +30,8 @@ def argparse(argv, parser, add_argument):
         An Observable of strings.
     parser : Observable
         An Observable containing one Parser item.
-    add_argument : Observable
-        An Observable containing AddArgument items.
+    arguments : Observable
+        An Observable containing ArgumentDef items.
 
 
     Returns
@@ -46,7 +46,7 @@ def argparse(argv, parser, add_argument):
 
     parse_request = parser \
         .map(lambda i: ArgumentParser(description=i.description)) \
-        .combine_latest(add_argument, lambda parser, arg_spec: add_arg(parser,arg_spec)) \
+        .combine_latest(arguments, lambda parser, arg_def: add_arg(parser,arg_def)) \
         .last() \
         .combine_latest(argv.to_list(), lambda parser, args: (parser,args))
 

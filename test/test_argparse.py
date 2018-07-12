@@ -19,7 +19,7 @@ class ArgparseTestCase(TestCase):
             Observable.from_(["--foo", "fooz"]),
             Observable.just(argparse.Parser(description="test_parse")),
             Observable.from_([
-                argparse.AddArgument(name="--foo"),
+                argparse.ArgumentDef(name="--foo"),
             ]))
 
         expected_result = [
@@ -38,7 +38,7 @@ class ArgparseTestCase(TestCase):
             Observable.from_(["--bar", "barz"]),
             Observable.just(argparse.Parser(description="test_parse")),
             Observable.from_([
-                argparse.AddArgument(name="--foo"),
+                argparse.ArgumentDef(name="--foo"),
             ]))
 
         actual_result = None
