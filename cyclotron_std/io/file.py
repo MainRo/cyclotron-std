@@ -8,11 +8,14 @@ Sink = namedtuple('Sink', ['request'])
 Source = namedtuple('Source', ['response'])
 
 # Sink items
-Read = namedtuple('Read', ['id', 'path', 'size'])
-Read.__new__.__defaults__ = (-1,)
+Read = namedtuple('Read', ['id', 'path', 'size', 'mode'])
+Read.__new__.__defaults__ = (-1, 'r',)
+Write = namedtuple('Write', ['id', 'path', 'data', 'mode'])
+Write.__new__.__defaults__ = ('w',)
 
 # Source items
 ReadResponse = namedtuple('ReadResponse', ['id', 'path', 'data'])
+WriteResponse = namedtuple('WriteResponse', ['id', 'path', 'status'])
 
 
 def make_driver(loop=None):
@@ -38,10 +41,16 @@ def make_driver(loop=None):
 
             def on_request_item(i):
                 if type(i) is Read:
-                    with open(i.path, 'r') as content_file:
+                    with open(i.path, i.mode) as content_file:
                         content = content_file.read(i.size)
                         data = Observable.just(content)
                         observer.on_next(ReadResponse(id=i.id, path=i.path, data=data))
+                elif type(i) is Write:
+                    with open(i.path, i.mode) as content_file:
+                        print('foo')
+                        size = content_file.write(i.data)
+                        status = 0 if size == len(i.data) else -1
+                        observer.on_next(WriteResponse(id=i.id, path=i.path, status=status))
                 else:
                     observer.on_error("file unknown command: {}".format(i))
 
