@@ -16,12 +16,12 @@ except IOError:
 python_requires='>=3.5'
 install_requires = [
     'rx>=1.6',
-    'cyclotron>=0.3',
+    'cyclotron>=0.5',
 ]
 
 setup(
     name="cyclotron-std",
-    version='0.3.0',
+    version='0.4.0',
     url='https://github.com/MainRo/cyclotron-std.git',
     license='MIT',
     description="Standard library drivers and components for cyclotron",
