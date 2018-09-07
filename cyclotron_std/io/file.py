@@ -12,6 +12,7 @@ Read = namedtuple('Read', ['id', 'path', 'size', 'mode'])
 Read.__new__.__defaults__ = (-1, 'r',)
 Write = namedtuple('Write', ['id', 'path', 'data', 'mode'])
 Write.__new__.__defaults__ = ('w',)
+ReadLine = namedtuple('ReadLine', ['id', 'path'])
 
 # Source items
 ReadResponse = namedtuple('ReadResponse', ['id', 'path', 'data'])
@@ -45,6 +46,10 @@ def make_driver(loop=None):
                         content = content_file.read(i.size)
                         data = Observable.just(content)
                         observer.on_next(ReadResponse(id=i.id, path=i.path, data=data))
+                elif type(i) is ReadLine:
+                    content_file = open(i.path)
+                    data = Observable.from_(content_file)
+                    observer.on_next(ReadResponse(id=i.id, path=i.path, data=data))
                 elif type(i) is Write:
                     with open(i.path, i.mode) as content_file:
                         print('foo')
