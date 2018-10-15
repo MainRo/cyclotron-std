@@ -52,7 +52,6 @@ def make_driver(loop=None):
                     observer.on_next(ReadResponse(id=i.id, path=i.path, data=data))
                 elif type(i) is Write:
                     with open(i.path, i.mode) as content_file:
-                        print('foo')
                         size = content_file.write(i.data)
                         status = 0 if size == len(i.data) else -1
                         observer.on_next(WriteResponse(id=i.id, path=i.path, status=status))

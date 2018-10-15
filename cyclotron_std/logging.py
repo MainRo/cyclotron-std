@@ -14,6 +14,7 @@ Log = namedtuple('Log', ['logger', 'level', 'message'])
 # Sink and Source items
 SetLevelDone = namedtuple('SetLevelDone', [])
 
+
 def level_from_string(level):
     if level == 'DEBUG':
         return 10
@@ -30,6 +31,7 @@ def level_from_string(level):
 def make_driver():
     handlers = {}
     observer = None
+
     def driver(sink):
         def on_subscribe(o):
             nonlocal observer
@@ -38,9 +40,9 @@ def make_driver():
         def on_request_item(i):
             nonlocal handlers
             nonlocal observer
-            if type(i) is Log:                    
+            if type(i) is Log:
                 logging.getLogger(i.logger).log(i.level, i.message)
-            elif type(i) is SetLevel:                
+            elif type(i) is SetLevel:
                 level = level_from_string(i.level)
                 logger = logging.getLogger(i.logger)
                 logger.setLevel(level)
