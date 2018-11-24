@@ -2,6 +2,7 @@ import os
 from collections import namedtuple
 
 from rx import Observable, AnonymousObservable
+from rx.subjects import Subject
 from cyclotron import Component
 
 Sink = namedtuple('Sink', ['request'])
@@ -49,3 +50,39 @@ def make_driver(loop=None):
         return Source(response=AnonymousObservable(subscribe_response))
 
     return Component(call=driver, input=Sink)
+
+
+Api = namedtuple('Api', ['walk'])
+Adapter = namedtuple('Adapter', ['sink', 'api'])
+
+
+def adapter(source):
+    sink_request = Subject()
+
+    def walk(top, recursive=False):
+        def on_subscribe(observer):
+            response = (
+                source
+                .filter(lambda i: i.id is response_observable)
+                .take(1)
+                .map(lambda i: i.content)
+            )
+
+            dispose = response.subscribe(observer)
+            sink_request.on_next(Walk(
+                id=response_observable,
+                top=top,
+                recursive=recursive,
+            ))
+
+            return dispose
+
+        response_observable = Observable.create(on_subscribe)
+        return response_observable
+
+    return Adapter(
+        sink=sink_request,
+        api=Api(
+            walk=walk,
+        )
+    )
