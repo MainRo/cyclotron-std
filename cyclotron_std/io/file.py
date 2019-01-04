@@ -1,4 +1,5 @@
 import os
+import functools
 from collections import namedtuple
 
 from rx import Observable
@@ -10,6 +11,7 @@ Sink = namedtuple('Sink', ['request'])
 Source = namedtuple('Source', ['response'])
 
 # Sink items
+Context = namedtuple('Context', ['id', 'observable'])
 Read = namedtuple('Read', ['id', 'path', 'size', 'mode'])
 Read.__new__.__defaults__ = (-1, 'r',)
 Write = namedtuple('Write', ['id', 'path', 'data', 'mode', 'mkdirs'])
@@ -40,10 +42,55 @@ def make_driver(loop=None):
         - name: identifier of the file
         - data: content of the file
         """
+        def on_context_subscribe(sink, observer):
+            def on_next(i):
+                if type(i) is Read:
+                    try:
+                        with open(i.path, i.mode) as content_file:
+                            content = content_file.read(i.size)
+                            data = Observable.just(content)
+                            observer.on_next(ReadResponse(
+                                id=i.id, path=i.path, data=data))
+                    except Exception as e:
+                        observer.on_next(Observable.throw(e))
+                elif type(i) is ReadLine:
+                    try:
+                        with open(i.path) as content_file:
+                            data = Observable.from_(content_file)
+                            observer.on_next(ReadResponse(
+                                id=i.id, path=i.path, data=data))
+                    except Exception as e:
+                        observer.on_next(Observable.throw(e))
+                elif type(i) is Write:
+                    try:
+                        if i.mkdirs is True:
+                            os.makedirs(os.path.split(i.path)[0], exist_ok=True)
+                        with open(i.path, i.mode) as content_file:
+                            size = content_file.write(i.data)
+                            status = 0 if size == len(i.data) else -1
+                            observer.on_next(WriteResponse(
+                                id=i.id, path=i.path, status=status))
+                    except Exception as e:
+                        observer.on_next(Observable.throw(e))
+                else:
+                    observer.on_error("file unknown command: {}".format(i))
+
+            sink.subscribe(
+                on_next=on_next,
+                on_completed=observer.on_completed,
+                on_error=observer.on_error
+            )
+
         def on_subscribe(observer):
 
             def on_request_item(i):
-                if type(i) is Read:
+                if type(i) is Context:
+                    observer.on_next(
+                        Context(i.id, Observable.create(functools.partial(
+                            on_context_subscribe,
+                            i.observable)))
+                    )
+                elif type(i) is Read:
                     with open(i.path, i.mode) as content_file:
                         content = content_file.read(i.size)
                         data = Observable.just(content)
