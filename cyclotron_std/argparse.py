@@ -1,7 +1,8 @@
 from collections import namedtuple
 import argparse as std
+import rx
+import rx.operators as ops
 
-from rx import AnonymousObservable
 
 class ArgumentParser(std.ArgumentParser):
     """ This overloaded ArgumentParser class avoids that the parser exits in
@@ -19,7 +20,8 @@ ArgumentDef.__new__.__defaults__ = ('',)
 # output items
 Argument = namedtuple('Argument', ['key', 'value'])
 
-def argparse(argv, parser, arguments):
+
+def argparse(description, arguments):
     """ A command line argument parser.
     Parses arguments coming from the argv Observable and outputs them as
     Argument items in the output observable.
@@ -39,27 +41,27 @@ def argparse(argv, parser, arguments):
     Observable
         An Observable of Argument items.
     """
-    def add_arg(parser, arg_spec):
-        parser.add_argument(arg_spec.name, help=arg_spec.help)
-        return parser
 
+    def _argparse(argv):
 
-    parse_request = parser \
-        .map(lambda i: ArgumentParser(description=i.description)) \
-        .combine_latest(arguments, lambda parser, arg_def: add_arg(parser,arg_def)) \
-        .last() \
-        .combine_latest(argv.to_list(), lambda parser, args: (parser,args))
+        parser = ArgumentParser(description=description)
+        for arg in arguments:
+            parser.add_argument(arg.name, help=arg.help)
 
-    def subscribe(observer):
-        def on_next(value):
-            parser, args = value
-            try:
-                args = parser.parse_args(args)
-                for key,value in vars(args).items():
-                    observer.on_next(Argument(key=key, value=value))
-            except NameError as exc:
-                observer.on_error("{}\n{}".format(exc, parser.format_help()))
+        def subscribe(observer, scheduler):
+            def on_next(value):
+                try:
+                    args = parser.parse_args(value)
+                    for key, value in vars(args).items():
+                        observer.on_next(Argument(key=key, value=value))
+                except NameError as exc:
+                    observer.on_error("{}\n{}".format(exc, parser.format_help()))
 
-        return parse_request.subscribe(on_next, observer.on_error, observer.on_completed)
+            return argv.pipe(ops.to_list()).subscribe(
+                on_next=on_next,
+                on_error=observer.on_error,
+                on_completed=observer.on_completed)
 
-    return AnonymousObservable(subscribe)
+        return rx.create(subscribe)
+
+    return _argparse

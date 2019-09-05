@@ -1,10 +1,11 @@
-from collections import namedtuple
 import functools
 from unittest import TestCase
 
-from rx import Observable
-from rx.subjects import Subject
+import rx
+import rx.operators as ops
+from rx.subject import Subject
 import cyclotron_std.io.file as file
+
 
 class FileClientTestCase(TestCase):
     def setUp(self):
@@ -32,31 +33,34 @@ class FileClientTestCase(TestCase):
             self.actual[key] = self.create_actual()
         self.actual[key]['completed'] = True  
 
-    def test_read(self):
+    def test_read_data(self):
         driver_response = Subject()
 
-        file_adapter = file.adapter(driver_response)
+        read_request = rx.just(file.Read(id=1, path='/foo.txt', size=-1, mode='r'))
 
-        file_adapter.sink.subscribe(
+        driver_request, read_response = read_request.pipe(file.read(driver_response))
+
+        driver_request.subscribe(
             on_next=functools.partial(self.on_next, 'driver_request'),
             on_error=functools.partial(self.on_error, 'driver_request'),
             on_completed=functools.partial(self.on_completed, 'driver_request'))
 
-        response = file_adapter.api.read('/foo.txt')
-
-        response.subscribe(
+        read_response.pipe(ops.flat_map(lambda i: i.data)).subscribe(
             on_next=functools.partial(self.on_next, 'response'),
             on_error=functools.partial(self.on_error, 'response'),
             on_completed=functools.partial(self.on_completed, 'response'))
 
         self.assertEqual(
-            file.Read(id=response, 
-                path='/foo.txt',
-                size=-1, mode='r',
+            file.Context(
+                id=read_request,
+                observable=read_request
             ),
             self.actual['driver_request']['next'][0])
 
-        result = file.ReadResponse(id=response, path='a', data=Observable.just(b'bar'))
+        result = file.Context(
+            id=read_request,
+            observable=rx.just(file.ReadResponse(id=1, path='/foo.txt', data=rx.just(b'bar')))
+        )
         driver_response.on_next(result)
 
         self.assertIs(

@@ -6,9 +6,9 @@ from cyclotron import Component
 Sink = namedtuple('Sink', ['data'])
 
 
-def make_driver(loop=None):
+def make_driver(factory_scheduler=None):
 
-    def stdout_driver(sink):
+    def driver(sink, default_scheduler=None):
         def on_data_error(e):
             sys.stdout.write("error: {}".format(e))
             sys.stdout.flush()
@@ -22,4 +22,4 @@ def make_driver(loop=None):
             on_completed=on_data_completed)
         return None
 
-    return Component(call=stdout_driver, input=Sink)
+    return Component(call=driver, input=Sink)

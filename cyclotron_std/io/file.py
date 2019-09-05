@@ -2,8 +2,8 @@ import os
 import functools
 from collections import namedtuple
 
-from rx import Observable
-from rx.subjects import Subject
+import rx
+import rx.operators as ops
 from cyclotron import Component
 
 
@@ -24,15 +24,12 @@ WriteResponse = namedtuple('WriteResponse', ['id', 'path', 'status'])
 
 
 def make_driver(loop=None):
+
     def driver(sink):
         """ File driver.
         Reads content of files provided in sink stream and outputs it in the
         source stream.
         warning: implementation is synchronous.
-
-        @todo : This driver should return a stream of streams so that the
-        content of each file end with a stream completion. For now each "data"
-        stream ends once the first file content is read.
 
         sink stream structure:
         - name: identifier of the file
@@ -48,19 +45,29 @@ def make_driver(loop=None):
                     try:
                         with open(i.path, i.mode) as content_file:
                             content = content_file.read(i.size)
-                            data = Observable.just(content)
-                            observer.on_next(ReadResponse(
-                                id=i.id, path=i.path, data=data))
+                            data = rx.just(content)
                     except Exception as e:
-                        observer.on_next(Observable.throw(e))
+                        data = rx.throw(e)
+
+                    observer.on_next(ReadResponse(
+                        id=i.id, path=i.path, data=data))
                 elif type(i) is ReadLine:
                     try:
                         with open(i.path) as content_file:
-                            data = Observable.from_(content_file)
-                            observer.on_next(ReadResponse(
-                                id=i.id, path=i.path, data=data))
+                            ''' from_ does not work with ImmediateScheduler
+                            def on_data_subscribe(data_observer):
+                                for line in content_file:
+                                    data_observer.on_next(line)
+                                data_observer.on_completed()
+
+                            data = Observable.create(on_data_subscribe)
+                            '''
+                            data = rx.from_(content_file)
                     except Exception as e:
-                        observer.on_next(Observable.throw(e))
+                        data = rx.throw(e)
+
+                    observer.on_next(ReadResponse(
+                        id=i.id, path=i.path, data=data))
                 elif type(i) is Write:
                     try:
                         if i.mkdirs is True:
@@ -68,10 +75,13 @@ def make_driver(loop=None):
                         with open(i.path, i.mode) as content_file:
                             size = content_file.write(i.data)
                             status = 0 if size == len(i.data) else -1
-                            observer.on_next(WriteResponse(
-                                id=i.id, path=i.path, status=status))
+
                     except Exception as e:
-                        observer.on_next(Observable.throw(e))
+                        status = e
+
+                    observer.on_next(WriteResponse(
+                        id=i.id, path=i.path, status=status))
+
                 else:
                     observer.on_error("file unknown command: {}".format(i))
 
@@ -81,113 +91,44 @@ def make_driver(loop=None):
                 on_error=observer.on_error
             )
 
-        def on_subscribe(observer):
-
+        def on_subscribe(observer, scheduler):
             def on_request_item(i):
+                print(i)
                 if type(i) is Context:
                     observer.on_next(
-                        Context(i.id, Observable.create(functools.partial(
+                        Context(i.id, rx.create(functools.partial(
                             on_context_subscribe,
                             i.observable)))
                     )
-                elif type(i) is Read:
-                    with open(i.path, i.mode) as content_file:
-                        content = content_file.read(i.size)
-                        data = Observable.just(content)
-                        observer.on_next(ReadResponse(
-                            id=i.id, path=i.path, data=data))
-                elif type(i) is ReadLine:
-                    content_file = open(i.path)
-                    data = Observable.from_(content_file)
-                    observer.on_next(ReadResponse(
-                        id=i.id, path=i.path, data=data))
-                elif type(i) is Write:
-                    if i.mkdirs is True:
-                        os.makedirs(os.path.split(i.path)[0], exist_ok=True)
-                    with open(i.path, i.mode) as content_file:
-                        size = content_file.write(i.data)
-                        status = 0 if size == len(i.data) else -1
-                        observer.on_next(WriteResponse(
-                            id=i.id, path=i.path, status=status))
+
                 else:
                     observer.on_error("file unknown command: {}".format(i))
 
-            def on_request_error(e):
-                observer.on_error(e)
-
-            def on_request_completed():
-                observer.on_completed()
-
             dispose = sink.request.subscribe(
                 on_next=on_request_item,
-                on_error=on_request_error,
-                on_completed=on_request_completed)
+                on_error=observer.on_error,
+                on_completed=observer.on_completed)
 
             return dispose
 
         return Source(
-            response=Observable.create(on_subscribe),
+            response=rx.create(on_subscribe),
         )
 
     return Component(call=driver, input=Sink)
 
 
-Api = namedtuple('Api', ['read', 'write'])
-Adapter = namedtuple('Adapter', ['sink', 'api'])
+def read(driver_response):
+    def _read(read_request):
 
-
-def adapter(source):
-    sink_request = Subject()
-
-    def read(path, size=-1, mode='r'):
-        def on_subscribe(observer):
-            response = (
-                source
-                .filter(lambda i: i.id is response_observable)
-                .take(1)
-                .flat_map(lambda i: i.data)
+        driver_request = rx.just(
+                Context(id=read_request, observable=read_request)
             )
 
-            dispose = response.subscribe(observer)
-            sink_request.on_next(Read(
-                id=response_observable,
-                path=path,
-                size=size,
-                mode=mode,
-            ))
-
-            return dispose
-
-        response_observable = Observable.create(on_subscribe)
-        return response_observable
-
-    def write(path, data, mode='w', mkdirs=False):
-        def on_subscribe(observer):
-            response = (
-                source
-                .filter(lambda i: i.id is response_observable)
-                .take(1)
-                .map(lambda i: i.status)
-            )
-
-            dispose = response.subscribe(observer)
-            sink_request.on_next(Write(
-                id=response_observable,
-                path=path,
-                data=data,
-                mode=mode,
-                mkdirs=mkdirs)
-            )
-
-            return dispose
-
-        response_observable = Observable.create(on_subscribe)
-        return response_observable
-
-    return Adapter(
-        sink=sink_request,
-        api=Api(
-            read=read,
-            write=write,
+        read_response = driver_response.pipe(
+            ops.filter(lambda i: i.id is read_request),
+            ops.flat_map(lambda i: i.observable)
         )
-    )
+        return driver_request, read_response
+
+    return _read

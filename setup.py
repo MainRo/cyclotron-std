@@ -15,7 +15,7 @@ except IOError:
 
 python_requires='>=3.5'
 install_requires = [
-    'rx>=1.6',
+    'rx>=3.0',
     'cyclotron>=0.5',
 ]
 

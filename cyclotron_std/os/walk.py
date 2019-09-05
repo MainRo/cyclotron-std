@@ -1,8 +1,9 @@
 import os
 from collections import namedtuple
 
-from rx import Observable, AnonymousObservable
-from rx.subjects import Subject
+import rx
+import rx.operators as ops
+from rx.subject import Subject
 from cyclotron import Component
 
 Sink = namedtuple('Sink', ['request'])
@@ -17,7 +18,7 @@ WalkResponse = namedtuple('WalkResponse', ['top', 'id', 'content'])
 DirItem = namedtuple('DirItem', ['top', 'directories', 'files'])
 
 
-def walk(top, recursive):
+def walk(top, recursive, scheduler):
 
     dirnames = []
     filenames = []
@@ -26,28 +27,30 @@ def walk(top, recursive):
             filenames.append(os.path.join(path, filename))
         if recursive is True:
             for dirname in dirs:
-                dirnames.append(walk(os.path.join(path, dirname), recursive))
+                dirnames.append(walk(os.path.join(path, dirname), recursive, scheduler))
 
     return DirItem(
         top=top,
-        directories=Observable.from_(dirnames),
-        files=Observable.from_(filenames))
+        directories=rx.from_(dirnames, scheduler=scheduler),
+        files=rx.from_(filenames, scheduler=scheduler))
 
 
-def make_driver(loop=None):
+def make_driver(factory_scheduler=None):
 
-    def driver(sink):
-        def subscribe_response(observer):
+    def driver(sink, default_scheduler=None):
+        driver_scheduler = factory_scheduler or default_scheduler
+
+        def subscribe_response(observer, scheduler):
             def on_request_item(i):
                 if type(i) is Walk:
-                    content = walk(i.top, i.recursive)
+                    content = walk(i.top, i.recursive, driver_scheduler)
                     observer.on_next(WalkResponse(
                         top=i.top, id=i.id,
                         content=content))
 
             sink.request.subscribe(on_request_item)
 
-        return Source(response=AnonymousObservable(subscribe_response))
+        return Source(response=rx.create(subscribe_response))
 
     return Component(call=driver, input=Sink)
 
@@ -60,12 +63,11 @@ def adapter(source):
     sink_request = Subject()
 
     def walk(top, recursive=False):
-        def on_subscribe(observer):
-            response = (
-                source
-                .filter(lambda i: i.id is response_observable)
-                .take(1)
-                .map(lambda i: i.content)
+        def on_subscribe(observer, scheduler):
+            response = source.pipe(
+                ops.filter(lambda i: i.id is response_observable),
+                ops.take(1),
+                ops.map(lambda i: i.content),
             )
 
             dispose = response.subscribe(observer)
@@ -77,7 +79,7 @@ def adapter(source):
 
             return dispose
 
-        response_observable = Observable.create(on_subscribe)
+        response_observable = rx.create(on_subscribe)
         return response_observable
 
     return Adapter(

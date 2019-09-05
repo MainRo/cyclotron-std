@@ -1,14 +1,16 @@
 import sys
 from collections import namedtuple
 
-from rx import Observable
+import rx
 from cyclotron import Component
 
 Source = namedtuple('Source', ['argv'])
 
-def make_driver(loop = None):
 
-    def argv_driver():
-        return Source(argv=Observable.from_(sys.argv))
+def make_driver(factory_scheduler=None):
 
-    return Component(call=argv_driver)
+    def driver(default_scheduler=None):
+        scheduler = factory_scheduler or default_scheduler
+        return Source(argv=rx.from_(sys.argv, scheduler=scheduler))
+
+    return Component(call=driver)

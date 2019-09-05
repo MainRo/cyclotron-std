@@ -4,8 +4,9 @@ from unittest.mock import patch, MagicMock
 import logging as std_logging
 import cyclotron_std.logging as logging
 
-from rx import Observable
-from rx.subjects import Subject
+import rx
+from rx.subject import Subject
+
 
 class LoggingestCase(TestCase):
 
@@ -15,8 +16,7 @@ class LoggingestCase(TestCase):
         sink = logging.Sink(request=request)
         source = driver.call(sink)
 
-        self.assertIsInstance(source, logging.Source)
-        self.assertIsNotNone(source.response)
+        self.assertIsNone(source)
 
     @patch('logging.getLogger')
     def test_log(self, mock_get_logger):

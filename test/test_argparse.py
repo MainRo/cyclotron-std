@@ -1,50 +1,50 @@
 from unittest import TestCase
 
-from rx import Observable
+import rx
+import rx.operators as ops
 import cyclotron_std.argparse as argparse
 
 
 class ArgparseTestCase(TestCase):
 
     def test_creation(self):
-        args = argparse.argparse(
-            Observable.empty(),
-            Observable.empty(),
-            Observable.empty())
-
-        self.assertIsNotNone(args)
+        parse = argparse.argparse("", [])
+        self.assertIsNotNone(parse)
 
     def test_parse(self):
-        args = argparse.argparse(
-            Observable.from_(["--foo", "fooz"]),
-            Observable.just(argparse.Parser(description="test_parse")),
-            Observable.from_([
+        parse = argparse.argparse(
+            "test_parse", [
                 argparse.ArgumentDef(name="--foo"),
-            ]))
+            ])
 
         expected_result = [
             argparse.Argument(key="foo", value="fooz")
         ]
 
         actual_result = None
+
         def set_result(i):
             nonlocal actual_result
             actual_result = i
-        args.to_list().subscribe(set_result)
+
+        args = rx.from_(["--foo", "fooz"])
+        args.pipe(
+            parse,
+            ops.to_list()).subscribe(set_result)
         self.assertEqual(expected_result, actual_result)
 
     def test_parse_bad_arg(self):
-        args = argparse.argparse(
-            Observable.from_(["--bar", "barz"]),
-            Observable.just(argparse.Parser(description="test_parse")),
-            Observable.from_([
+        parse = argparse.argparse(
+            "test_parse", [
                 argparse.ArgumentDef(name="--foo"),
-            ]))
+            ])
 
         actual_result = None
+
         def on_error(error):
             nonlocal actual_result
             actual_result = error
 
-        args.subscribe(on_error=on_error)
+        args = rx.from_(["--bar", "barz"])
+        args.pipe(parse).subscribe(on_error=on_error)
         self.assertIn("unrecognized arguments", actual_result)

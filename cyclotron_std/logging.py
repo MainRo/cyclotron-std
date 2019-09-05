@@ -1,11 +1,10 @@
 from collections import namedtuple
-from rx import Observable
+import rx
 import logging
 from cyclotron import Component
 
 
 Sink = namedtuple('Sink', ['request'])
-Source = namedtuple('Source', ['response'])
 
 # Sink items
 SetLevel = namedtuple('SetLevel', ['logger', 'level'])
@@ -28,18 +27,12 @@ def level_from_string(level):
         return 40
 
 
-def make_driver():
-    handlers = {}
-    observer = None
+def make_driver(factory_scheduler=None):
+    def driver(sink, default_scheduler=None):
+        handlers = {}
 
-    def driver(sink):
-        def on_subscribe(o):
-            nonlocal observer
-            observer = o
-
-        def on_request_item(i):
+        def on_next(i):
             nonlocal handlers
-            nonlocal observer
             if type(i) is Log:
                 logging.getLogger(i.logger).log(i.level, i.message)
             elif type(i) is SetLevel:
@@ -51,14 +44,8 @@ def make_driver():
                 handlers[i.logger] = logging.StreamHandler()
                 handlers[i.logger].setLevel(level)
                 logger.addHandler(handlers[i.logger])
-            elif type(i) is SetLevelDone:
-                if observer is not None:
-                    observer.on_next(i)
-            else:
-                if observer is not None:
-                    observer.on_error("invalid item: {}".format(i))
 
-        sink.request.subscribe(on_request_item)
-        return Source(response=Observable.create(on_subscribe))
+        sink.request.subscribe(on_next)
+        return None
 
     return Component(call=driver, input=Sink)

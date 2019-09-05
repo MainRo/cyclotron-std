@@ -3,7 +3,9 @@ import tempfile
 import os
 import shutil
 
-from rx import Observable, Observer
+import rx
+import rx.operators as ops
+from rx.core import Observer
 import cyclotron_std.os.walk as walk
 
 
@@ -24,7 +26,7 @@ class OsWalkTestCase(TestCase):
         shutil.rmtree(self.wordkir)
 
     def test_create(self):
-        source = walk.make_driver().call(walk.Sink(request=Observable.empty()))
+        source = walk.make_driver().call(walk.Sink(request=rx.empty()))
         self.assertIsNotNone(source)
 
     def test_walk_file(self):
@@ -32,7 +34,7 @@ class OsWalkTestCase(TestCase):
         expected_files = ['foo', 'bar', 'biz']
         actual_files = []
         create_file_tree(self.wordkir, [], expected_files)
-        source = walk.make_driver().call(walk.Sink(request=Observable.just(
+        source = walk.make_driver().call(walk.Sink(request=rx.just(
             walk.Walk(top=self.wordkir, id='test')
         )))
 
@@ -46,14 +48,13 @@ class OsWalkTestCase(TestCase):
             def on_error(self, e):
                 raise Exception(e)
 
-        source.response \
-            .filter(lambda i: type(i) is walk.WalkResponse) \
-            .flat_map(lambda i: i.content.files) \
-            .subscribe(TestObserver())
+        source.response.pipe(
+            ops.filter(lambda i: type(i) is walk.WalkResponse),
+            ops.flat_map(lambda i: i.content.files),
+        ).subscribe(TestObserver())
 
         for f in expected_files:
             self.assertIn(os.path.join(self.wordkir, f), actual_files)
-
 
     def test_walk_dir(self):
 
@@ -62,7 +63,7 @@ class OsWalkTestCase(TestCase):
         actual_files = []
         actual_dirs = []
         create_file_tree(self.wordkir, expected_dirs, expected_files)
-        source = walk.make_driver().call(walk.Sink(request=Observable.just(
+        source = walk.make_driver().call(walk.Sink(request=rx.just(
             walk.Walk(top=self.wordkir, id='test', recursive=True)
         )))
 
@@ -76,10 +77,10 @@ class OsWalkTestCase(TestCase):
             def on_error(self, e):
                 raise Exception(e)
 
-        source.response \
-            .filter(lambda i: type(i) is walk.WalkResponse) \
-            .flat_map(lambda i: i.content.directories) \
-            .subscribe(TestObserver())
+        source.response.pipe(
+            ops.filter(lambda i: type(i) is walk.WalkResponse),
+            ops.flat_map(lambda i: i.content.directories),
+        ).subscribe(TestObserver())
 
         for f in expected_dirs:
             self.assertIn(os.path.join(self.wordkir, f), actual_dirs)
@@ -90,7 +91,7 @@ class OsWalkTestCase(TestCase):
         expected_dirs = ['dfoo', 'dbar', 'dbiz']
         actual_files = []
         create_file_tree(self.wordkir, expected_dirs, expected_files)
-        source = walk.make_driver().call(walk.Sink(request=Observable.just(
+        source = walk.make_driver().call(walk.Sink(request=rx.just(
             walk.Walk(top=self.wordkir, id='test', recursive=True)
         )))
 
@@ -104,11 +105,11 @@ class OsWalkTestCase(TestCase):
             def on_error(self, e):
                 raise Exception(e)
 
-        source.response \
-            .filter(lambda i: type(i) is walk.WalkResponse) \
-            .flat_map(lambda i: i.content.directories) \
-            .flat_map(lambda i: i.files) \
-            .subscribe(TestObserver())
+        source.response.pipe(
+            ops.filter(lambda i: type(i) is walk.WalkResponse),
+            ops.flat_map(lambda i: i.content.directories),
+            ops.flat_map(lambda i: i.files),
+        ).subscribe(TestObserver())
 
         for f in expected_files:
             self.assertIn(os.path.join(self.wordkir, f), actual_files)
