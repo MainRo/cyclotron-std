@@ -1,2 +1,2 @@
-rx>=1.6,<2.0
-cyclotron>=0.4
+rx>=3.0
+cyclotron>=1.0

@@ -13,10 +13,10 @@ except IOError:
     # maybe running setup.py from some other dir
     description = ''
 
-python_requires='>=3.5'
+python_requires = '>=3.5'
 install_requires = [
     'rx>=3.0',
-    'cyclotron>=0.5',
+    'cyclotron>=1.0',
 ]
 
 setup(
