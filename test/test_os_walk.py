@@ -87,7 +87,11 @@ class OsWalkTestCase(TestCase):
 
     def test_walk_file_and_dir(self):
 
-        expected_files = ['dfoo/foo', 'dbar/bar', 'dbiz/biz']
+        expected_files = [
+            os.path.join('dfoo', 'foo'), 
+            os.path.join('dbar', 'bar'),
+            os.path.join('dbiz', 'biz'),
+        ]
         expected_dirs = ['dfoo', 'dbar', 'dbiz']
         actual_files = []
         create_file_tree(self.wordkir, expected_dirs, expected_files)
