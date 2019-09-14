@@ -12,42 +12,28 @@ class ArgumentParser(std.ArgumentParser):
     def error(self, message):
         raise NameError(message)
 
-# config items
-Parser = namedtuple('Parser', ['description'])
-ArgumentDef = namedtuple('ArgumentDef', ['name', 'help'])
-ArgumentDef.__new__.__defaults__ = ('',)
 
 # output items
 Argument = namedtuple('Argument', ['key', 'value'])
 
 
-def argparse(description, arguments):
+def parse(parser):
     """ A command line argument parser.
     Parses arguments coming from the argv Observable and outputs them as
     Argument items in the output observable.
 
     Parameters
     -----------
-    argv : Observable
-        An Observable of strings.
-    parser : Observable
-        An Observable containing one Parser item.
-    arguments : Observable
-        An Observable containing ArgumentDef items.
-
+    parser : ArgumentParser
+        A parser object.
 
     Returns
     -------
-    Observable
-        An Observable of Argument items.
+    Function
+        A parser function accepting argv as input and returning parsed arguments
     """
 
-    def _argparse(argv):
-
-        parser = ArgumentParser(description=description)
-        for arg in arguments:
-            parser.add_argument(arg.name, help=arg.help)
-
+    def _parse(argv):
         def subscribe(observer, scheduler):
             def on_next(value):
                 try:
@@ -64,4 +50,4 @@ def argparse(description, arguments):
 
         return rx.create(subscribe)
 
-    return _argparse
+    return _parse

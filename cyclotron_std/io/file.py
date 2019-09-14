@@ -23,7 +23,7 @@ ReadResponse = namedtuple('ReadResponse', ['id', 'path', 'data'])
 WriteResponse = namedtuple('WriteResponse', ['id', 'path', 'status'])
 
 
-def make_driver(loop=None):
+def make_driver():
 
     def driver(sink):
         """ File driver.
@@ -39,7 +39,7 @@ def make_driver(loop=None):
         - name: identifier of the file
         - data: content of the file
         """
-        def on_context_subscribe(sink, observer):
+        def on_context_subscribe(sink, observer, scheduler):
             def on_next(i):
                 if type(i) is Read:
                     try:
@@ -93,7 +93,6 @@ def make_driver(loop=None):
 
         def on_subscribe(observer, scheduler):
             def on_request_item(i):
-                print(i)
                 if type(i) is Context:
                     observer.on_next(
                         Context(i.id, rx.create(functools.partial(

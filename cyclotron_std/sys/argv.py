@@ -7,10 +7,9 @@ from cyclotron import Component
 Source = namedtuple('Source', ['argv'])
 
 
-def make_driver(factory_scheduler=None):
+def make_driver(scheduler=None):
 
-    def driver(default_scheduler=None):
-        scheduler = factory_scheduler or default_scheduler
+    def driver():
         return Source(argv=rx.from_(sys.argv, scheduler=scheduler))
 
     return Component(call=driver)

@@ -27,8 +27,8 @@ def level_from_string(level):
         return 40
 
 
-def make_driver(factory_scheduler=None):
-    def driver(sink, default_scheduler=None):
+def make_driver():
+    def driver(sink):
         handlers = {}
 
         def on_next(i):
