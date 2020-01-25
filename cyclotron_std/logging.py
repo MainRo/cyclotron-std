@@ -1,5 +1,4 @@
 from collections import namedtuple
-import rx
 import logging
 from cyclotron import Component
 
@@ -9,9 +8,6 @@ Sink = namedtuple('Sink', ['request'])
 # Sink items
 SetLevel = namedtuple('SetLevel', ['logger', 'level'])
 Log = namedtuple('Log', ['logger', 'level', 'message'])
-
-# Sink and Source items
-SetLevelDone = namedtuple('SetLevelDone', [])
 
 
 def level_from_string(level):
