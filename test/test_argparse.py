@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-import rx
-import rx.operators as ops
+import reactivex as rx
+import reactivex.operators as ops
 import cyclotron_std.argparse as argparse
 
 

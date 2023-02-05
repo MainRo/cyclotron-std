@@ -2,8 +2,8 @@ import os
 import functools
 from collections import namedtuple
 
-import rx
-import rx.operators as ops
+import reactivex as rx
+import reactivex.operators as ops
 from cyclotron import Component
 
 

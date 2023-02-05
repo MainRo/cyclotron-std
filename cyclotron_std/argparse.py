@@ -1,7 +1,7 @@
 from collections import namedtuple
 import argparse as std
-import rx
-import rx.operators as ops
+import reactivex as rx
+import reactivex.operators as ops
 
 
 class ArgumentParser(std.ArgumentParser):

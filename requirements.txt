@@ -1,2 +1,2 @@
-rx>=3.0
-cyclotron>=1.0
+reactivex~=4.0
+cyclotron~=2.0

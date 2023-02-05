@@ -1,7 +1,7 @@
 import sys
 from collections import namedtuple
 
-import rx
+import reactivex as rx
 from cyclotron import Component
 
 Source = namedtuple('Source', ['argv'])

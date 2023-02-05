@@ -3,9 +3,10 @@ import tempfile
 import os
 import shutil
 
-import rx
-import rx.operators as ops
-from rx.core import Observer
+import reactivex as rx
+import reactivex.operators as ops
+from reactivex import Observer
+
 import cyclotron_std.os.walk as walk
 
 

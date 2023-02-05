@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock
 import logging as std_logging
 import cyclotron_std.logging as logging
 
-import rx
-from rx.subject import Subject
+import reactivex as rx
+from reactivex.subject import Subject
 
 
 class LoggingestCase(TestCase):
